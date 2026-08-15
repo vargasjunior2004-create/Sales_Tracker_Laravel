@@ -1,7 +1,7 @@
-FROM php:8.4-cli
+FROM php:8.4-fpm
 
 RUN apt-get update && apt-get install -y \
-    git curl zip unzip \
+    git curl zip unzip nginx \
     libpng-dev libonig-dev libxml2-dev libpq-dev \
     libzip-dev libicu-dev \
     && docker-php-ext-configure gd \
@@ -26,6 +26,11 @@ RUN composer dump-autoload --optimize --no-interaction \
     && cp -r frontend/dist/* public/ \
     && chmod +x start.sh
 
+RUN cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak && \
+    rm /etc/nginx/sites-enabled/default
+
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 EXPOSE 8000
 
-CMD ["./start.sh"]
+CMD service php8.4-fpm start && nginx -g "daemon off;"
