@@ -1,0 +1,147 @@
+import { useState, useEffect, useCallback } from 'react';
+import api from '../services/api';
+import { Button, Input, Select, Card, Alert, Badge } from './ui';
+import type { User, UserFormData } from '../types';
+
+interface UserFormState {
+  name: string;
+  email: string;
+  password: string;
+  role: 'admin' | 'ventas';
+}
+
+const emptyUser: UserFormState = { name: '', email: '', password: '', role: 'ventas' };
+
+export default function UsersModule() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState<UserFormState>({ ...emptyUser });
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [error, setError] = useState('');
+
+  const loadUsers = useCallback(async () => {
+    try { setUsers(await api.getUsers()); } catch (err) { console.error(err); } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { loadUsers(); }, [loadUsers]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
+
+  const openNew = () => { setForm({ ...emptyUser }); setEditingId(null); setShowForm(true); setError(''); };
+  const openEdit = (user: User) => {
+    setForm({ name: user.name, email: user.email, password: '', role: user.role });
+    setEditingId(user.id); setShowForm(true); setError('');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault(); setError('');
+    try {
+      const payload: UserFormData = { name: form.name, email: form.email, role: form.role };
+      if (form.password) payload.password = form.password;
+      if (editingId) {
+        await api.updateUser(editingId, payload);
+      } else {
+        if (!form.password) { setError('La contrasena es requerida para nuevos usuarios'); return; }
+        await api.createUser({ ...payload, password: form.password });
+      }
+      setShowForm(false); loadUsers();
+    } catch (err) { setError((err as { error?: string }).error || 'Error al guardar usuario'); }
+  };
+
+  const toggleActive = async (user: User) => {
+    try { await api.updateUser(user.id, { active: !user.active }); loadUsers(); } catch (err) { alert((err as { error?: string }).error || 'Error'); }
+  };
+
+  if (loading) return <p className="text-center text-slate-400 py-20">Cargando...</p>;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h1 className="text-2xl font-bold text-slate-900">Usuarios</h1>
+        <Button onClick={openNew}>Agregar Usuario</Button>
+      </div>
+
+      {showForm && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
+          <Card className="w-full max-w-lg p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-slate-900">{editingId ? 'Editar Usuario' : 'Nuevo Usuario'}</h3>
+            {error && <Alert type="error">{error}</Alert>}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <Input label="Nombre" name="name" value={form.name} onChange={handleChange} required />
+              <Input label="Email" name="email" type="email" value={form.email} onChange={handleChange} required />
+              <Input
+                label={editingId ? 'Nueva contrasena (dejar vacio para no cambiar)' : 'Contrasena (unica por usuario)'}
+                name="password" type="password" value={form.password} onChange={handleChange}
+                placeholder="Debe ser unica para cada usuario"
+                required={!editingId}
+              />
+              <Select label="Rol" name="role" value={form.role} onChange={handleChange}>
+                <option value="ventas">Ventas</option>
+                <option value="admin">Administrador</option>
+              </Select>
+              <div className="flex gap-3 pt-2">
+                <Button type="submit">Guardar</Button>
+                <Button variant="secondary" type="button" onClick={() => setShowForm(false)}>Cancelar</Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      <Card className="hidden md:block overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-200">
+              {['Nombre', 'Email', 'Rol', 'Estado', ''].map((h) => (
+                <th key={h} className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {users.map((u) => (
+              <tr key={u.id} className={`hover:bg-green-50 transition-colors ${!u.active ? 'opacity-50' : ''}`}>
+                <td className="px-4 py-3 font-medium text-slate-900">{u.name}</td>
+                <td className="px-4 py-3 text-slate-600">{u.email}</td>
+                <td className="px-4 py-3"><Badge color={u.role === 'admin' ? 'amber' : 'blue'}>{u.role}</Badge></td>
+                <td className="px-4 py-3">
+                  <Badge color={u.active ? 'green' : 'red'}>{u.active ? 'Activo' : 'Inactivo'}</Badge>
+                </td>
+                <td className="px-4 py-3 space-x-1">
+                  <Button variant="ghost" size="sm" onClick={() => openEdit(u)}>Editar</Button>
+                  <Button variant={u.active ? 'danger' : 'success'} size="sm" onClick={() => toggleActive(u)}>
+                    {u.active ? 'Desactivar' : 'Activar'}
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+
+      <div className="md:hidden space-y-3">
+        {users.map((u) => (
+          <Card key={u.id} className={`p-4 space-y-2 ${!u.active ? 'opacity-50' : ''}`}>
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="font-semibold text-slate-900">{u.name}</p>
+                <p className="text-sm text-slate-500">{u.email}</p>
+              </div>
+              <div className="flex gap-1.5">
+                <Badge color={u.role === 'admin' ? 'amber' : 'blue'}>{u.role}</Badge>
+                <Badge color={u.active ? 'green' : 'red'}>{u.active ? 'Activo' : 'Inactivo'}</Badge>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button variant="ghost" size="sm" onClick={() => openEdit(u)} className="flex-1">Editar</Button>
+              <Button variant={u.active ? 'danger' : 'success'} size="sm" onClick={() => toggleActive(u)} className="flex-1">
+                {u.active ? 'Desactivar' : 'Activar'}
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
