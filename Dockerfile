@@ -4,8 +4,7 @@ RUN apt-get update && apt-get install -y \
     git curl zip unzip \
     libpng-dev libonig-dev libxml2-dev libpq-dev \
     libzip-dev libicu-dev \
-    libfreetype6-dev libjpeg64-turbo-dev libwebp-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-configure gd \
     && docker-php-ext-install \
         pdo_pgsql mbstring exif pcntl bcmath gd zip xml intl fileinfo dom opcache \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
