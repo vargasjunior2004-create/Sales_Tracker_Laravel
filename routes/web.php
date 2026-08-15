@@ -3,8 +3,11 @@
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    $content = file_get_contents(public_path('index.html'));
-    return response($content, 200)
-        ->header('Content-Type', 'text/html')
-        ->header('Cache-Control', 'no-cache');
+    $path = public_path('index.html');
+    if (file_exists($path)) {
+        return response(file_get_contents($path), 200)
+            ->header('Content-Type', 'text/html')
+            ->header('Cache-Control', 'no-cache');
+    }
+    abort(404, 'index.html not found at: ' . $path);
 });
