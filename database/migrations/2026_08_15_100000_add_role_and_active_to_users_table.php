@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('role', 10)->default('ventas')->after('password');
-            $table->boolean('active')->default(true)->after('role');
+            $table->string('role', 10)->default('ventas');
+            $table->boolean('active')->default(true);
         });
     }
 

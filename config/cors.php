@@ -9,6 +9,8 @@ return [
     'allowed_origins' => [
         env('FRONTEND_URL', 'http://localhost:5173'),
         'http://localhost:5174',
+        'https://vistabolivia.qd.je',
+        'https://salestracker-api.onrender.com',
     ],
 
     'allowed_origins_patterns' => [],

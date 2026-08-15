@@ -21,7 +21,7 @@ return new class extends Migration
             $table->unsignedSmallInteger('bill_100')->default(0);
             $table->unsignedSmallInteger('bill_200')->default(0);
             $table->foreignId('createdBy_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+            $table->timestamp('updated_at')->useCurrent();
         });
     }
 
